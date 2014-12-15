@@ -41,10 +41,11 @@ class HipChat(object):
 
 class HipChatHandler(logging.Handler):
 
-    def __init__(self, admin_token, room, sender=''):
+    def __init__(self, admin_token, room, silence_errors=False, sender=''):
         logging.Handler.__init__(self)
         self.sender = sender
         self.api = HipChat(admin_token, room)
+        self.silence_errors = silence_errors
 
     def emit(self, record):
         if hasattr(record, "color"):
@@ -55,11 +56,15 @@ class HipChatHandler(logging.Handler):
             sender = record.sender
         else:
             sender='-'.join([n for n in [self.sender, record.levelname] if n])
-        self.api.send_message(
-            self.format(record),
-            sender=sender,
-            color=color
-        )
+        try:
+            self.api.send_message(
+                self.format(record),
+                sender=sender,
+                color=color
+            )
+        except Exception:
+            if not self.silence_errors:
+                raise
 
     def __color_for_level(self, levelno):
         if levelno > logging.WARNING:
